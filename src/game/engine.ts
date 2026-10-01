@@ -13,13 +13,14 @@ import {
 } from "./sprites";
 import { bossFrames, charFrames, enemyFrames, itemFrames, type Enemy3D, type Frames, type ItemFrames } from "./models3d";
 import { bossT, charT, spellT, stageT, tr, type Lang } from "./i18n";
-import { BOMBS, CHARS, DIFFS, type BombDef, type CharDef, type DiffDef } from "./config";
+import { BOMBS, CHARS, DIFFS, ZOOMS, type BombDef, type CharDef, type DiffDef } from "./config";
 
 export const W = 480;
 export const H = 640;
 const TAU = Math.PI * 2;
 const UP = -Math.PI / 2;
-const PLAYER_R = 3;
+const ZOOM_MIN = ZOOMS[0];
+const ZOOM_MAX = ZOOMS[ZOOMS.length - 1];
 const GRAZE_R = 15;
 const MAX_BULLETS = 1100;
 const MAX_PARTS = 650;
@@ -50,11 +51,16 @@ interface Bullet {
 interface ShotOpt {
   p?: number; home?: boolean; amp?: number; ph?: number;
   sp?: number; sn?: number; ss?: number; ch?: number; sc?: number;
+  /** trait-specific behaviour */
+  delay?: number; accel?: number; bounces?: number; orbit?: number; weave?: number;
 }
 interface Shot {
   x: number; y: number; vx: number; vy: number; spd: number; dmg: number; kind: number;
   pierce: number; last: object | null; age: number; amp: number; ph: number; home: boolean;
   splitAt: number; splitN: number; spread: number; chain: number; sc: number;
+  /** trait-specific state */
+  delay: number; accel: number; bounces: number; orbit: number; weave: number;
+  ox: number; oy: number;
 }
 interface Particle {
   x: number; y: number; vx: number; vy: number; life: number; max: number;
@@ -117,11 +123,21 @@ const STAGES: StageDef[] = [
   { pal: 5, waves: [12, 1, 9, 10, 7, 2], eh: [300, 130, 50], boss: 5, bossHue: 300 },
   { pal: 6, waves: [10, 6, 8, 11, 12, 2], eh: [48, 215, 280], boss: 6, bossHue: 55 },
   { pal: 7, waves: [9, 11, 10, 6, 7, 2], eh: [265, 200, 330], boss: 7, bossHue: 250 },
+  { pal: 0, waves: [13, 14, 12, 15, 13, 2], eh: [140, 200, 330], boss: 8, bossHue: 145 },
+  { pal: 1, waves: [16, 14, 17, 12, 16, 2], eh: [15, 60, 340], boss: 9, bossHue: 20 },
+  { pal: 2, waves: [15, 18, 13, 14, 12, 2], eh: [190, 265, 45], boss: 10, bossHue: 285 },
+  { pal: 3, waves: [19, 16, 15, 17, 19, 2], eh: [320, 290, 130], boss: 11, bossHue: 175 },
+  { pal: 4, waves: [17, 19, 18, 13, 20, 2], eh: [205, 150, 275], boss: 12, bossHue: 210 },
+  { pal: 5, waves: [20, 18, 16, 17, 13, 2], eh: [295, 60, 200], boss: 13, bossHue: 310 },
+  { pal: 6, waves: [18, 20, 15, 19, 16, 2], eh: [40, 220, 285], boss: 14, bossHue: 45 },
+  { pal: 7, waves: [13, 19, 20, 18, 17, 2], eh: [270, 195, 335], boss: 15, bossHue: 235 },
 ];
-const ALL_WAVES = [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 2];
+const ALL_WAVES = [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 2];
 const BH = [
   [0, 1, 2, 6], [1, 2, 0, 6], [2, 1, 0, 4], [0, 2, 4, 1],
   [4, 5, 2, 6], [6, 0, 1, 4], [2, 3, 4, 6], [6, 4, 0, 2],
+  [13, 16, 14, 6], [20, 18, 15, 2], [13, 17, 19, 14], [16, 20, 13, 2],
+  [18, 14, 17, 19], [15, 20, 16, 13], [17, 13, 20, 18], [19, 16, 14, 20],
 ];
 
 const ENEMY = [
@@ -138,6 +154,14 @@ const ENEMY = [
   { hp: 14, r: 13, score: 650, gems: 3, slot: 1, leave: 1.6 }, // 10 lancer
   { hp: 130, r: 22, score: 3500, gems: 12, slot: 2, leave: 14 }, // 11 tower
   { hp: 8, r: 9, score: 350, gems: 2, slot: 0, leave: 99 }, // 12 firefly
+  { hp: 11, r: 12, score: 620, gems: 3, slot: 1, leave: 99 }, // 13 drifter
+  { hp: 18, r: 15, score: 780, gems: 4, slot: 2, leave: 5.5 }, // 14 beetle
+  { hp: 7, r: 10, score: 380, gems: 2, slot: 0, leave: 99 }, // 15 wisp
+  { hp: 26, r: 15, score: 1000, gems: 5, slot: 1, leave: 6.5 }, // 16 spinner
+  { hp: 46, r: 18, score: 1500, gems: 7, slot: 2, leave: 10 }, // 17 sentinel
+  { hp: 15, r: 13, score: 700, gems: 3, slot: 0, leave: 99 }, // 18 orbiter
+  { hp: 55, r: 19, score: 1700, gems: 8, slot: 1, leave: 7.5 }, // 19 weaver
+  { hp: 100, r: 22, score: 3200, gems: 11, slot: 2, leave: 12 }, // 20 colossus
 ];
 const E3D: Record<number, Enemy3D> = { 3: "crystal", 4: "urchin", 6: "turret", 7: "star", 8: "manta", 9: "mine", 11: "tower" };
 
@@ -175,6 +199,10 @@ export class Game {
   private shotRot: boolean[] = [];
   private scale = 1;
   private dpr = 1;
+  /** Multiplicador de zoom del campo de juego (1 = ajustada al contenedor). */
+  private zoom = 1;
+  /** Escala de tiempo global: <1 ralentiza todo para esquivar mejor. */
+  timeScale = 1;
   private raf = 0;
   private lastT = 0;
   private time = 0;
@@ -197,6 +225,7 @@ export class Game {
   private shots = new Pool<Shot>(() => ({
     x: 0, y: 0, vx: 0, vy: 0, spd: 0, dmg: 1, kind: 0, pierce: 1, last: null, age: 0,
     amp: 0, ph: 0, home: false, splitAt: 0, splitN: 0, spread: 0, chain: 0, sc: 1,
+    delay: 0, accel: 0, bounces: 0, orbit: 0, weave: 0, ox: 0, oy: 0,
   }));
   private parts = new Pool<Particle>(() => ({
     x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 1, hue: 0, kind: 0, drag: 0, grav: 0,
@@ -305,7 +334,7 @@ export class Game {
   private T(key: string, vars?: Record<string, string | number>) { return tr(this.lang, key, vars); }
   private N(n: number) { return Math.max(1, Math.round(n * this.D.dens)); }
   private N2(n: number) { return Math.max(1, Math.round(n * (1 + (this.D.dens - 1) * 0.5))); }
-  private bc(k: number) { return BH[this.stageIdx % 8][k % 4]; }
+  private bc(k: number) { return BH[this.stageIdx % BH.length][k % 4]; }
   private sp() { return Math.min(1.9, 1 + this.level * 0.09) * this.D.speed; }
   private iv(x: number) { return x / this.D.rate; }
 
@@ -313,6 +342,11 @@ export class Game {
   setMuted(m: boolean) { this.sfx.setMuted(m); }
   setLang(l: Lang) { this.lang = l; }
   setTouchFocus(on: boolean) { this.touchFocus = on; }
+  setZoom(z: number) {
+    this.zoom = clamp(z, ZOOM_MIN, ZOOM_MAX);
+    this.resize();
+  }
+  getZoom() { return this.zoom; }
   ui() { this.sfx.init(); this.sfx.click(); }
   configure(char: number, diff: number) {
     this.cfg.char = clamp(char, 0, CHARS.length - 1);
@@ -394,7 +428,7 @@ export class Game {
     const cw = this.container.clientWidth;
     const ch = this.container.clientHeight;
     const pad = cw < 600 ? 0 : 14;
-    this.scale = Math.max(0.2, Math.min((cw - pad * 2) / W, (ch - pad * 2) / H));
+    this.scale = Math.max(0.2, Math.min((cw - pad * 2) / W, (ch - pad * 2) / H)) * this.zoom;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
     const cssW = W * this.scale;
     const cssH = H * this.scale;
@@ -478,7 +512,7 @@ export class Game {
     if (dt <= 0) return;
     if (dt > 0.05) dt = 0.05;
     this.time += dt;
-    if (this.state === "playing") this.update(dt);
+    if (this.state === "playing") this.update(dt * this.timeScale);
     else if (this.state === "menu" || this.state === "over") {
       this.updateBg(dt);
       this.updateParts(dt);
@@ -495,9 +529,10 @@ export class Game {
   }
 
   private update(dt: number) {
+    const rdt = dt / (this.timeScale || 1);
     let sdt = dt;
     if (this.slowT > 0) {
-      this.slowT -= dt;
+      this.slowT -= rdt;
       sdt = dt * this.slowScale;
     }
     this.clock += sdt;
@@ -596,7 +631,8 @@ export class Game {
     const focusKey = k.has("ShiftLeft") || k.has("ShiftRight") || this.touchFocus;
     p.focus += ((focusKey ? 1 : 0) - p.focus) * Math.min(1, dt * 20);
     if (dx && dy) { dx *= Math.SQRT1_2; dy *= Math.SQRT1_2; }
-    const speed = this.C.speed + (this.C.focus - this.C.speed) * p.focus;
+    let speed = this.C.speed + (this.C.focus - this.C.speed) * p.focus;
+    if (this.C.trait === "dash") speed *= 1 + 0.12 * (1 - p.focus);
     const mdt = p.dying > 0 ? dt * 0.4 : dt;
     const ox = p.x;
     p.x += dx * speed * mdt + this.touchDX;
@@ -635,6 +671,13 @@ export class Game {
     s.spread = o?.ss ?? 0.4;
     s.chain = o?.ch ?? 0;
     s.sc = o?.sc ?? 1;
+    s.delay = o?.delay ?? 0;
+    s.accel = o?.accel ?? 0;
+    s.bounces = o?.bounces ?? 0;
+    s.orbit = o?.orbit ?? 0;
+    s.weave = o?.weave ?? 0;
+    s.ox = x;
+    s.oy = y;
   }
 
   private nearestTarget(x: number, y: number, skip?: object): { x: number; y: number } | null {
@@ -661,6 +704,7 @@ export class Game {
     const f = p.focus;
     const foc = f > 0.5;
     p.volley++;
+    const shotsBefore = this.shots.n;
     switch (ci) {
       // ----- Mizu: bubble stream + radial pulse -----
       case 0: {
@@ -1030,7 +1074,83 @@ export class Game {
         break;
       }
     }
+    this.applyTrait(shotsBefore, lvl, f);
     this.sfx.shoot();
+  }
+
+  /** Applies the pilot's signature mechanic to the volley it just fired. */
+  private applyTrait(from: number, lvl: number, f: number) {
+    const S = this.shots;
+    const p = this.p;
+    const t = this.C.trait;
+    if (t === "none" || S.n <= from) return;
+    for (let i = from; i < S.n; i++) {
+      const s = S.items[i];
+      switch (t) {
+        case "delayed":
+          s.delay = 0.16 + 0.05 * Math.random();
+          s.vx = s.vy = 0;
+          break;
+        case "ricochet":
+          s.bounces = 1 + lvl;
+          break;
+        case "bigshot":
+          s.sc = 1.5;
+          s.dmg *= 1.7;
+          break;
+        case "spread":
+          s.accel = 320 + 180 * lvl;
+          s.delay = 0.1;
+          s.vx = s.vy = 0;
+          break;
+        case "pierce":
+          s.pierce += 1 + lvl;
+          s.dmg *= 1 + 0.25 * lvl;
+          break;
+        case "slowgrow":
+          s.accel = 110;
+          break;
+        case "ember":
+          if (p.volley % 4 === 0) { s.accel = 260; s.pierce += 1; s.dmg *= 1.2; }
+          break;
+        case "gust":
+          if (f < 0.5) s.accel = 90;
+          break;
+        case "dense":
+          s.accel = 60;
+          break;
+        case "meteor":
+          s.accel = 420 + 160 * lvl;
+          s.dmg *= 1.35;
+          break;
+        case "lance":
+          s.pierce += 1;
+          if (p.volley % 2 === 0) s.splitAt = 0.3;
+          break;
+        case "homing":
+          s.home = true;
+          break;
+        case "wave":
+          s.weave = 0.05 * (1 - f);
+          break;
+        case "orbit":
+          s.delay = 0.35;
+          s.orbit = 2.4;
+          s.vx = s.vy = 0;
+          break;
+        case "rear":
+          s.vy = -Math.abs(s.vy);
+          s.y = p.y + 14;
+          break;
+        case "chainhit":
+          s.chain += 1;
+          break;
+      }
+    }
+    if (t === "rear" && lvl >= 3) {
+      for (let i = 0; i < lvl - 2; i++)
+        this.addShot(p.x + (i - (lvl - 3) / 2) * 9, p.y + 14, Math.PI / 2, 560, 0.8, this.cfg.char);
+    }
   }
 
   private hitPlayer() {
@@ -1341,6 +1461,63 @@ export class Game {
         for (let i = 0; i < 4; i++) this.later(0.8 + i * 0.4, () => this.addEnemy(1, i % 2 ? W + 20 : -20, rnd(150, 260), i % 2 ? -1 : 1, 0));
         break;
       }
+      case 13: { // drifting column
+        const n = n2(5);
+        const x0 = rnd(90, W - 90);
+        for (let i = 0; i < n; i++)
+          this.later(i * 0.24, () => this.addEnemy(13, x0 + i * 10, -20, 1, rnd(100, 220)));
+        break;
+      }
+      case 14: { // ram pack from alternating sides
+        for (let i = 0; i < 3; i++) {
+          const side = i % 2 ? 1 : -1;
+          this.later(i * 0.7, () => this.addEnemy(14, side > 0 ? -30 : W + 30, rnd(60, 140), side, rnd(160, 280)));
+        }
+        break;
+      }
+      case 15: { // wisp rain
+        const n = n2(7);
+        for (let i = 0; i < n; i++)
+          this.later(i * 0.18, () => this.addEnemy(15, 40 + ((i + 0.5) * (W - 80)) / n, -20, 1, rnd(140, 300)));
+        break;
+      }
+      case 16: { // twin spinners orbiting
+        const y = rnd(120, 200);
+        this.addEnemy(16, W * 0.35, -30, 1, y);
+        this.later(1.1, () => this.addEnemy(16, W * 0.65, -30, 1, y + 40));
+        for (let i = 0; i < 3; i++) this.later(1.6 + i * 0.3, () => this.addEnemy(13, rnd(60, W - 60), -20, 1, rnd(120, 240)));
+        break;
+      }
+      case 17: { // sentinel pair with escort
+        const side = Math.random() < 0.5 ? 1 : -1;
+        this.addEnemy(17, side > 0 ? 40 : W - 40, -40, side, rnd(110, 170));
+        this.later(1.3, () => this.addEnemy(17, side > 0 ? W - 40 : 40, -40, -side, rnd(110, 170)));
+        for (let i = 0; i < 3; i++) this.later(2 + i * 0.3, () => this.addEnemy(12, rnd(80, W - 80), -20, 1, rnd(160, 260)));
+        break;
+      }
+      case 18: { // orbiter ring
+        const n = n2(5);
+        const cx = W / 2, cy = rnd(140, 200);
+        for (let i = 0; i < n; i++)
+          this.later(i * 0.22, () => this.addEnemy(18, cx, -20, 1, cy));
+        break;
+      }
+      case 19: { // weaver zigzag sweep
+        const n = n2(4);
+        for (let i = 0; i < n; i++) {
+          const x = rnd(60, W - 60);
+          this.later(i * 0.55, () => this.addEnemy(19, x, -20, 1, rnd(130, 230)));
+        }
+        this.later(0.4, () => this.addEnemy(15, 70, -20, 1, 180));
+        this.later(1.0, () => this.addEnemy(15, W - 70, -20, 1, 180));
+        break;
+      }
+      case 20: { // colossus with support
+        this.addEnemy(20, W / 2, -50, 1, rnd(110, 160));
+        for (let i = 0; i < 3; i++) this.later(0.9 + i * 0.4, () => this.addEnemy(14, i % 2 ? -30 : W + 30, rnd(80, 130), i % 2 ? 1 : -1, rnd(200, 300)));
+        for (let i = 0; i < 3; i++) this.later(2.4 + i * 0.35, () => this.addEnemy(13, rnd(70, W - 70), -20, 1, rnd(180, 280)));
+        break;
+      }
       default: {
         const n = n2(6);
         for (let i = 0; i < n; i++)
@@ -1436,6 +1613,58 @@ export class Game {
           e.y += (e.stopY - e.y) * Math.min(1, dt * 1.4) + Math.cos(e.t * 2.3 + e.spin) * 26 * dt;
           if (e.t > 9) remove = true;
           break;
+        case 13: // drifter: slow descending sine drift
+          e.y += (e.stopY - e.y) * Math.min(1, dt * 1.6);
+          e.x = e.sx + Math.sin(e.t * 1.6 + e.spin) * 60;
+          if (e.t > 8) remove = true;
+          break;
+        case 14: // beetle: crawl in, then ram the player line
+          if (e.fl === 0) {
+            e.y += (e.stopY - e.y) * Math.min(1, dt * 2.4);
+            e.x += Math.sin(e.t * 5 + e.spin) * 40 * dt;
+            if (e.t > 1.6) e.fl = 1;
+          } else {
+            const a = Math.atan2(p.y - e.y, p.x - e.x);
+            e.x += Math.cos(a) * 260 * dt;
+            e.y += Math.sin(a) * 260 * dt;
+            if (e.t > 6 || off) remove = true;
+          }
+          break;
+        case 15: // wisp: fast short dash, then leave upward
+          if (e.fl === 0) {
+            e.y += 320 * dt;
+            if (e.y > e.stopY) { e.fl = 1; e.fireT = 0.3; }
+          } else if (e.fl === 1) {
+            e.y -= 300 * dt;
+            if (e.y < -40) remove = true;
+          } else {
+            e.y += (e.stopY - e.y) * Math.min(1, dt * 1.8);
+            e.x += Math.cos(e.t * 2 + e.spin) * 30 * dt;
+          }
+          break;
+        case 16: // spinner: circular path around its anchor
+          e.x = e.sx + Math.cos(e.t * 1.9 + e.spin) * 72;
+          e.y = e.stopY + Math.sin(e.t * 1.9 + e.spin) * 44;
+          break;
+        case 17: // sentinel: holds high, strafes slowly
+          e.y += (e.stopY - e.y) * Math.min(1, dt * 2.8);
+          e.x += e.dir * 62 * dt;
+          if ((e.dir > 0 && e.x > W - 40) || (e.dir < 0 && e.x < 40)) e.dir *= -1;
+          if (e.t > 12) remove = true;
+          break;
+        case 18: // orbiter: orbits its anchor, fires aimed pairs
+          e.x = e.sx + Math.cos(e.t * 2.6 + e.spin) * 54;
+          e.y = e.stopY + Math.sin(e.t * 2.6 + e.spin) * 34;
+          break;
+        case 19: // weaver: weaves horizontally while descending
+          e.y += (e.stopY - e.y) * Math.min(1, dt * 1.8);
+          e.x = e.sx + Math.sin(e.t * 3.4 + e.spin) * 110;
+          if (e.t > 9) remove = true;
+          break;
+        case 20: // colossus: slow march, heavy twin spiral
+          e.y += (e.stopY - e.y) * Math.min(1, dt * 1.2);
+          e.x += Math.sin(e.t * 0.8 + e.spin) * 22 * dt;
+          break;
         default: {
           const leave = ENEMY[e.kind].leave;
           if (e.t < leave) {
@@ -1451,7 +1680,7 @@ export class Game {
       }
 
       if (!this.over && e.y > 8 && e.y < H - 130 && !remove) this.enemyFire(e, dt, sp, lvl);
-      if (!remove && !this.over && (e.x - p.x) ** 2 + (e.y - p.y) ** 2 < (e.r * 0.7 + PLAYER_R) ** 2) this.hitPlayer();
+      if (!remove && !this.over && (e.x - p.x) ** 2 + (e.y - p.y) ** 2 < (e.r * 0.7 + this.C.hitR) ** 2) this.hitPlayer();
       if (e.hp <= 0) { this.killEnemy(e); remove = true; }
       if (remove) this.enemies.splice(i, 1);
     }
@@ -1575,16 +1804,88 @@ export class Game {
           for (const s of [-1, 1]) this.fire(e.x + s * 26, e.y, Math.PI / 2, 105 * sp, 2, this.bc(3));
         }
         break;
-      default: // firefly: curving slow shots
+      case 12: // firefly: curving slow shots
         if (e.fireT <= 0) {
           e.fireT = this.iv(1.5);
           const sgn = Math.random() < 0.5 ? 1 : -1;
           this.fire(e.x, e.y, ang, 60 * sp, 0, this.bc(2), 95, sgn * 0.9, 165 * sp);
         }
+        break;
+      case 13: // drifter: aimed 3-shot spread
+        if (e.fireT <= 0) {
+          e.fireT = this.iv(1.3);
+          for (let j = -1; j <= 1; j++) this.fire(e.x, e.y, ang + j * 0.18, 140 * sp, 1, this.bc(0));
+        }
+        break;
+        case 14: // beetle: burst on contact window
+        if (e.fl === 1 && e.fireT <= 0) {
+          e.fireT = this.iv(1.6);
+          const n = this.N(10);
+          for (let j = 0; j < n; j++) this.fire(e.x, e.y, (j / n) * TAU + e.spin, 100 * sp, 1, this.bc(1));
+        }
+        break;
+      case 15: // wisp: quick straight burst
+        if (e.fl === 1 && e.fireT <= 0) {
+          e.fireT = this.iv(0.5);
+          this.fire(e.x, e.y, Math.PI / 2, 175 * sp, 0, this.bc(3));
+        }
+        break;
+      case 16: // spinner: continuous 4-way spiral
+        if (e.fireT <= 0) {
+          e.fireT = this.iv(0.16);
+          e.spin += 0.3;
+          const arms = this.N2(4);
+          for (let a = 0; a < arms; a++) this.fire(e.x, e.y, e.spin + (a / arms) * TAU, 110 * sp, 1, this.bc(a));
+        }
+        break;
+      case 17: // sentinel: alternating aimed fan + slow ring
+        if (e.fireT <= 0) {
+          e.fireT = this.iv(1.1);
+          const n = this.N2(5);
+          for (let j = 0; j < n; j++) this.fire(e.x, e.y, ang + (j - (n - 1) / 2) * 0.2, 120 * sp, 1, this.bc(0));
+        }
+        e.fireT2 -= dt;
+        if (e.fireT2 <= 0) {
+          e.fireT2 = this.iv(3.4);
+          const n = this.N(14);
+          for (let j = 0; j < n; j++) this.fire(e.x, e.y, (j / n) * TAU - e.t, 82 * sp, 2, this.bc(2));
+        }
+        break;
+      case 18: // orbiter: aimed twin, alternating lead
+        if (e.fireT <= 0) {
+          e.fireT = this.iv(0.9);
+          const sgn = e.fl++ % 2 ? 1 : -1;
+          this.fire(e.x, e.y, ang, 190 * sp, 0, this.bc(1));
+          this.fire(e.x, e.y, ang + sgn * 0.3, 160 * sp, 0, this.bc(2));
+        }
+        break;
+      case 19: // weaver: crossfire lattice
+        if (e.fireT <= 0) {
+          e.fireT = this.iv(0.7);
+          const n = this.N2(3);
+          for (let j = 0; j < n; j++)
+            this.fire(e.x, e.y, Math.PI / 2 + (j - (n - 1) / 2) * 0.3 + e.spin, 130 * sp, 1, this.bc(j));
+        }
+        break;
+      case 20: // colossus: heavy twin spiral + aimed burst
+        if (e.fireT <= 0) {
+          e.fireT = this.iv(0.15);
+          e.spin += 0.38 * (e.fl++ % 2 ? 1 : -1);
+          this.fire(e.x - 14, e.y, e.spin, 105 * sp, 1, this.bc(0));
+          this.fire(e.x + 14, e.y, -e.spin, 105 * sp, 1, this.bc(2));
+        }
+        e.fireT2 -= dt;
+        if (e.fireT2 <= 0) {
+          e.fireT2 = this.iv(2.4);
+          const n = this.N2(7);
+          for (let j = 0; j < n; j++) this.fire(e.x, e.y + 16, ang + (j - (n - 1) / 2) * 0.16, 135 * sp, 0, this.bc(1));
+        }
+        break;
     }
   }
 
   private killEnemy(e: Enemy) {
+    if (this.C.trait === "chainhit") this.reviveBullets(e.x, e.y);
     const cfg = ENEMY[e.kind];
     const v = cfg.score * this.mult();
     this.addScore(v);
@@ -1746,7 +2047,7 @@ export class Game {
     b.x += (b.tx - b.x) * Math.min(1, dt * 1.7);
     b.y += (b.ty - b.y) * Math.min(1, dt * (b.t < 2.4 ? 1.2 : 1.7));
     if (!this.over && b.t > 1.6 && b.inv <= 0.4) this.bossPattern(b, dt);
-    if (!this.over && b.y > 0 && (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < (22 + PLAYER_R) ** 2) this.hitPlayer();
+    if (!this.over && b.y > 0 && (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < (22 + this.C.hitR) ** 2) this.hitPlayer();
     if (b.hp <= 0) this.nextPhase(false);
     else if (b.phaseT > 34) this.nextPhase(true);
   }
@@ -1938,6 +2239,181 @@ export class Game {
           this.fire(b.x, b.y, -b.cnt * 0.7, 95 * sp, 0, bc(2), 0, -1.5);
         }
         break;
+      // ===== B8 Polyp Deep =====
+      case 24:
+        if (this.tick(b, 0, 1.0, dt)) { this.bRing(b, this.N(11 + lvl), 88, 2, bc(b.cnt++ % 3), -0.14); b.spin -= 0.31; }
+        if (this.tick(b, 1, 0.4, dt)) this.bFan(b, this.N2(4), 0.24, 150, 1, bc(1), aim);
+        break;
+      case 25:
+        if (this.tick(b, 0, 0.12, dt)) this.bSpiral(b, this.N2(3), 0.22, 128, 0, bc(b.cnt++ % 4), -b.dir);
+        b.dir = Math.floor(b.phaseT / 3.2) % 2 === 0 ? 1 : -1;
+        if (this.tick(b, 1, 2.4, dt)) this.bRing(b, this.N(20), 70, 1, bc(2), 0.2);
+        break;
+      case 26:
+        if (this.tick(b, 0, 0.55, dt)) {
+          const n = this.N(18);
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, (i / n) * TAU - b.t * 0.6, 62 * sp, 1, bc(i % 3), 68, 0, 165 * sp);
+        }
+        if (this.tick(b, 1, 0.9, dt)) this.bFan(b, this.N2(6), 0.15, 185, 1, bc(3), aim);
+        break;
+      // ===== B9 Solar Court =====
+      case 27:
+        if (this.tick(b, 0, 0.14, dt)) this.bSpiral(b, this.N2(5), 0.34, 118, 0, bc(b.cnt++ % 3), b.dir);
+        b.dir = Math.floor(b.phaseT / 5) % 2 === 0 ? 1 : -1;
+        break;
+      case 28:
+        if (this.tick(b, 0, 0.9, dt)) { this.bRing(b, this.N(24), 96, 2, bc(1), 0.1); this.shake = Math.max(this.shake, 5); }
+        if (this.tick(b, 1, 0.6, dt)) this.bFan(b, this.N2(3), 0.3, 200, 0, bc(2), aim);
+        break;
+      case 29:
+        if (this.tick(b, 0, 0.3, dt)) {
+          b.cnt++;
+          const off = b.cnt * 0.44;
+          for (let k = 0; k < 4; k++) this.fire(b.x, b.y, off + (k / 4) * TAU, 135 * sp, 0, bc(k), 0, 1.2);
+          for (let k = 0; k < 4; k++) this.fire(b.x, b.y, -off + (k / 4) * TAU, 135 * sp, 0, bc(k), 0, -1.2);
+        }
+        if (this.tick(b, 1, 1.6, dt)) this.bRing(b, this.N(16), 80, 2, bc(3), -0.16);
+        break;
+      // ===== B10 Prism Lattice =====
+      case 30:
+        if (this.tick(b, 0, 0.11, dt)) {
+          b.spin += 0.4;
+          this.fire(b.x - 16, b.y, b.spin, 112 * sp, 1, bc(0));
+          this.fire(b.x + 16, b.y, -b.spin, 112 * sp, 1, bc(2));
+        }
+        if (this.tick(b, 1, 1.9, dt)) { this.bRing(b, this.N(18), 76, 2, bc(1), 0.24); this.shake = Math.max(this.shake, 4); }
+        break;
+      case 31:
+        if (this.tick(b, 0, 0.75, dt)) {
+          const n = this.N2(7);
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, aim + (i - (n - 1) / 2) * 0.13, 210 * sp, 0, bc(i % 3));
+        }
+        if (this.tick(b, 1, 0.5, dt)) this.bSpiral(b, this.N2(3), 0.2, 132, 0, bc(2), b.dir);
+        break;
+      case 32:
+        if (this.tick(b, 0, 0.45, dt)) {
+          const n = this.N(26);
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, (i / n) * TAU + b.t, 30 * sp, 2, bc(i % 4), 96, 0, 185 * sp);
+        }
+        if (this.tick(b, 1, 0.34, dt)) this.bFan(b, this.N2(4), 0.26, 165, 1, bc(0), aim);
+        break;
+      // ===== B11 Silk Curtain =====
+      case 33:
+        if (this.tick(b, 0, 0.22, dt)) {
+          const n = this.N(15);
+          const sweep = Math.sin(b.t * 1.1) * 1.3;
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, sweep + (i / n) * Math.PI, 112 * sp, 1, bc(i % 2 ? 0 : 3));
+        }
+        if (this.tick(b, 1, 1.1, dt)) this.bFan(b, this.N2(5), 0.16, 180, 1, bc(1), aim);
+        break;
+      case 34:
+        if (this.tick(b, 0, 0.16, dt)) {
+          b.spin -= 0.27;
+          const arms = this.N2(4);
+          for (let a = 0; a < arms; a++) this.fire(b.x, b.y, b.spin + (a / arms) * TAU, 124 * sp, 0, bc(a));
+        }
+        if (this.tick(b, 1, 2.1, dt)) this.bRing(b, this.N(22), 84, 1, bc(2), 0.12);
+        break;
+      case 35:
+        if (this.tick(b, 0, 0.62, dt)) this.bRing(b, this.N(13 + 2 * lvl), 100, 2, bc(b.cnt++ % 4), -0.2);
+        if (this.tick(b, 1, 0.28, dt)) {
+          const n = this.N2(3);
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, aim + (i - (n - 1) / 2) * 0.2, 195 * sp, 0, bc(2));
+        }
+        break;
+      // ===== B12 Glacier Cage =====
+      case 36:
+        if (this.tick(b, 0, 0.7, dt)) {
+          const n = this.N(15);
+          for (let i = 0; i < n; i++) {
+            const a = UP + (i / (n - 1) - 0.5) * Math.PI * 0.95;
+            this.fire(b.x, b.y, a, 126 * sp, 1, bc(i % 3), 0, (i % 2 ? 1 : -1) * 0.5, 200 * sp);
+          }
+          this.shake = Math.max(this.shake, 4);
+        }
+        if (this.tick(b, 1, 1.5, dt)) this.bFan(b, this.N2(6), 0.14, 190, 1, bc(3), aim);
+        break;
+      case 37:
+        if (this.tick(b, 0, 0.13, dt)) this.bSpiral(b, this.N2(4), 0.31, 124, 0, bc(b.cnt++ % 3), -b.dir);
+        b.dir = Math.floor(b.phaseT / 3.8) % 2 === 0 ? 1 : -1;
+        break;
+      case 38:
+        if (this.tick(b, 0, 0.52, dt)) this.bRing(b, this.N(30), 74, 2, bc(0), b.t * 0.4);
+        if (this.tick(b, 1, 0.44, dt)) {
+          b.cnt++;
+          for (let k = 0; k < 3; k++) this.fire(b.x, b.y, b.cnt * 0.6 + (k / 3) * TAU, 150 * sp, 0, bc(k), 0, 0.8);
+        }
+        break;
+      // ===== B13 Petal Dance =====
+      case 39:
+        if (this.tick(b, 0, 0.24, dt)) {
+          const n = this.N(12);
+          const drift = Math.sin(b.t * 0.9) * 0.5;
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, drift + (i / n) * TAU, 100 * sp, 1, bc(i % 4));
+        }
+        if (this.tick(b, 1, 0.85, dt)) this.bFan(b, this.N2(5), 0.19, 172, 1, bc(1), aim);
+        break;
+      case 40:
+        if (this.tick(b, 0, 0.34, dt)) {
+          b.spin += 0.22;
+          const n = this.N(20);
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, b.spin + (i / n) * Math.PI, 118 * sp, 1, bc(i % 3), 24, 0, 210 * sp);
+        }
+        if (this.tick(b, 1, 1.3, dt)) this.bRing(b, this.N(14), 88, 2, bc(2), -0.1);
+        break;
+      case 41:
+        if (this.tick(b, 0, 1.1, dt)) { this.bRing(b, this.N(24), 102, 2, bc(b.cnt++ % 4), 0.16); this.shake = Math.max(this.shake, 6); }
+        if (this.tick(b, 1, 0.2, dt)) this.bFan(b, this.N2(9), 0.1, 168, 1, bc(0), aim);
+        break;
+      // ===== B14 Thunder Cage =====
+      case 42:
+        if (this.tick(b, 0, 0.16, dt)) this.bSpiral(b, this.N2(5), 0.36, 116, 0, bc(b.cnt++ % 4), b.dir);
+        b.dir = Math.floor(b.phaseT / 4.2) % 2 === 0 ? 1 : -1;
+        if (this.tick(b, 1, 1.4, dt)) this.bFan(b, this.N2(7), 0.12, 200, 0, bc(3), aim);
+        break;
+      case 43:
+        if (this.tick(b, 0, 0.9, dt)) {
+          const n = this.N(17);
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, (i / n) * TAU + b.t * 0.3, 46 * sp, 2, bc(i % 3), 130, 0, 220 * sp);
+        }
+        if (this.tick(b, 1, 0.3, dt)) {
+          b.cnt++;
+          this.fire(b.x, b.y, b.cnt * 0.9, 165 * sp, 0, bc(1), 0, 2);
+          this.fire(b.x, b.y, -b.cnt * 0.9, 165 * sp, 0, bc(2), 0, -2);
+        }
+        break;
+      case 44:
+        if (this.tick(b, 0, 0.6, dt)) {
+          for (let k = 0; k < 3; k++) this.fire(b.x - 20 + k * 20, b.y, UP, 150 * sp, 0, bc(k), 60, 0, 240 * sp);
+          this.shake = Math.max(this.shake, 5);
+        }
+        if (this.tick(b, 1, 0.26, dt)) this.bSpiral(b, this.N2(3), 0.28, 140, 0, bc(3), -b.dir);
+        break;
+      // ===== B15 Drowned Moon =====
+      case 45:
+        if (this.tick(b, 0, 1.25, dt)) { this.bRing(b, this.N(28), 92, 2, bc(b.cnt++ % 4), 0.12); this.shake = Math.max(this.shake, 6); }
+        if (this.tick(b, 1, 0.5, dt)) this.bFan(b, this.N2(6), 0.17, 178, 1, bc(1), aim);
+        break;
+      case 46:
+        if (this.tick(b, 0, 0.15, dt)) {
+          b.spin -= 0.36;
+          const arms = this.N2(6);
+          for (let a = 0; a < arms; a++) this.fire(b.x, b.y, b.spin + (a / arms) * TAU, 104 * sp, 0, bc(a));
+        }
+        if (this.tick(b, 1, 1.7, dt)) { this.bRing(b, this.N(18), 78, 2, bc(2), -0.22); this.shake = Math.max(this.shake, 4); }
+        break;
+      case 47:
+        if (this.tick(b, 0, 0.1, dt)) {
+          b.spin += 0.45;
+          this.fire(b.x, b.y, b.spin, 96 * sp, 0, bc(0));
+          this.fire(b.x, b.y, b.spin + Math.PI, 96 * sp, 0, bc(2));
+        }
+        if (this.tick(b, 1, 0.7, dt)) {
+          const n = this.N(32);
+          for (let i = 0; i < n; i++) this.fire(b.x, b.y, (i / n) * TAU - b.t * 0.5, 26 * sp, 2, bc(i % 4), 132, 0, 230 * sp);
+        }
+        if (this.tick(b, 2, 1.2, dt)) this.bFan(b, this.N2(9), 0.11, 205, 1, bc(3), aim);
+        break;
       default:
         if (this.tick(b, 0, 0.85, dt)) {
           const n = this.N(28);
@@ -1993,7 +2469,7 @@ export class Game {
       if (check) {
         const dx = b.x - p.x, dy = b.y - p.y;
         const d2 = dx * dx + dy * dy;
-        const hr = b.r + PLAYER_R;
+        const hr = b.r + this.C.hitR;
         if (d2 < hr * hr) {
           this.hitPlayer();
         } else if (!b.grazed) {
@@ -2018,7 +2494,28 @@ export class Game {
     for (let i = S.n - 1; i >= 0; i--) {
       const s = S.items[i];
       s.age += dt;
-      if (s.splitAt > 0 && s.age >= s.splitAt) {
+      if (s.delay > 0) {
+        // Delayed shots hover in place and cannot collide while charging.
+        s.delay -= dt;
+        if (s.delay > 0) {
+          if (Math.random() < 0.25) this.sparks(s.x, s.y, 1, WHITE, 60, 5, 0.2);
+          continue;
+        }
+        s.delay = 0;
+        // Just launched: set the initial velocity for orbit / accelerating shots.
+        if (s.orbit > 0) {
+          s.vx = Math.cos(UP + s.orbit * 2) * s.spd;
+          s.vy = Math.sin(UP + s.orbit * 2) * s.spd;
+        }
+      }
+      if (s.accel > 0 && s.delay <= 0 && !s.home) {
+        const sp = Math.min(2000, s.spd + s.accel * dt);
+        const cur = Math.atan2(s.vy, s.vx);
+        s.vx = Math.cos(cur) * sp;
+        s.vy = Math.sin(cur) * sp;
+        s.spd = sp;
+      }
+      if (s.splitAt > 0 && s.age >= s.splitAt + Math.max(0, s.delay)) {
         const ang = Math.atan2(s.vy, s.vx);
         const n = s.splitN;
         for (let j = 0; j < n; j++) {
@@ -2044,9 +2541,20 @@ export class Game {
       }
       s.x += s.vx * dt;
       s.y += s.vy * dt;
+      if (s.weave > 0) {
+        const cur = Math.atan2(s.vy, s.vx);
+        const w = Math.sin(s.age * 9 + s.ph) * s.weave;
+        s.vx = Math.cos(cur + w) * s.spd;
+        s.vy = Math.sin(cur + w) * s.spd;
+      }
+      if (s.bounces > 0) {
+        if (s.x < 6 && s.vx < 0) { s.vx = -s.vx; s.bounces--; this.sparks(s.x, s.y, 3, 4, 90, 6, 0.2); }
+        else if (s.x > W - 6 && s.vx > 0) { s.vx = -s.vx; s.bounces--; this.sparks(s.x, s.y, 3, 4, 90, 6, 0.2); }
+      }
       if (s.y < -30 || s.x < -30 || s.x > W + 30 || s.y > H + 30) { S.kill(i); continue; }
 
       let dead = false;
+      if (s.delay > 0) continue;
       for (let j = 0; j < this.enemies.length; j++) {
         const e = this.enemies[j];
         if (s.last === e) continue;
@@ -2092,6 +2600,24 @@ export class Game {
   private hitFx(x: number, y: number) {
     if (Math.random() < 0.6) this.sparks(x, y, 1, WHITE, 130, 7, 0.22);
     this.sfx.hit();
+  }
+
+  /** Raiden: a kill briefly re-ignites the bullets nearest to it. */
+  private reviveBullets(x: number, y: number) {
+    let made = 0;
+    for (let i = 0; i < this.bullets.n && made < 14; i++) {
+      const b = this.bullets.items[i];
+      if (b.grazed || b.turn !== 0 || b.age < 0.4) continue;
+      if ((b.x - x) ** 2 + (b.y - y) ** 2 > 130 * 130) continue;
+      b.age = 0;
+      b.grazed = false;
+      b.spd = Math.min(b.maxSpd || 400, b.spd * 1.12 + 14);
+      const a = Math.atan2(b.vy, b.vx);
+      b.vx = Math.cos(a) * b.spd;
+      b.vy = Math.sin(a) * b.spd;
+      this.sparks(b.x, b.y, 1, b.hue, 150, 6, 0.2);
+      made++;
+    }
   }
 
   // ---------- items ----------
@@ -2670,8 +3196,7 @@ export class Game {
       ctx.setLineDash([]);
       ctx.restore();
       ctx.globalAlpha = 1;
-    }
-  }
+    }  }
 
   private drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy) {
     const s = this.spr;

@@ -19,7 +19,7 @@ const KEYS = [
   "stat.power", "stat.speed", "stat.control", "bombBtn", "bombLabel",
   "hud.hi", "hud.graze", "hud.pow", "hud.max", "fx.powerUp", "fx.powerMax", "fx.bomb", "fx.life",
   "fx.bonus",   "stageN", "stageClear", "bonusLine", "extraLife", "warning", "warningSub", "modes", "new",
-  "how.mode", "select.wide", "select.focus",
+  "how.mode", "select.wide", "select.focus", "zoomBtn", "speedBtn", "hitbox",
 ] as const;
 export type Key = (typeof KEYS)[number];
 const IDX: Record<string, number> = {};
@@ -53,6 +53,7 @@ const EN: Pack = {
     "Stage {n}", "Stage {n} clear!", "Bonus +{v}", "Extra life!", "WARNING!", "A huge spirit approaches…", "Shot modes", "NEW",
     "Shift switches between the wide and focused shot patterns.",
     "WIDE", "FOCUS · SHIFT",
+    "Zoom: see more field", "Speed: slow the game down", "Hitbox",
   ],
   chars: [
     "Mizu|Balanced bubble spirit. Steady stream, plus a radial bubble pulse at max power.|Splash Wave",
@@ -89,11 +90,24 @@ const EN: Pack = {
     "Flower Sign «Petal Dance»", "Bloom Sign «Garden of Turning Light»", "Spring Sign «Cherry Blizzard»",
     "Thunder Sign «Forked Heaven»", "Bolt Sign «Cage of Lightning»", "Storm Sign «Wrath of Raijin»",
     "Moon Sign «Crescent Tide»", "Dream Sign «Silver Labyrinth»", "Eclipse Sign «Vanishing Horizon»",
+    "Tide Sign «Coral Lattice»", "Abyss Sign «Deep Polyp»", "Final Sign «Benthic Cathedral»",
+    "Solar Sign «Crown of Flames»", "Zenith Sign «Brass Sun»", "Apex Sign «Solar Verdict»",
+    "Prism Sign «Refraction»", "Lattice Sign «Bound Spectrum»", "Crown Sign «Prismatic Zenith»",
+    "Silk Sign «Woven Dawn»", "Curtain Sign «Aurora Veil»", "Drape Sign «Silk Cathedral»",
+    "Frost Sign «Rime Lattice»", "Vault Sign «Frozen Choir»", "Zero Sign «Everlasting Winter»",
+    "Petal Sign «Spiral Bloom»", "Blossom Sign «Petal Cyclone»", "Sakura Sign «Dancing Petals»",
+    "Thunder Sign «Forked Sky»", "Cage Sign «Bound Tempest»", "Raijin Sign «Heaven Severed»",
+    "Lunar Sign «Tidal Cross»", "Night Sign «Silver Veil»", "Eclipse Sign «Blackened Horizon»",
   ],
-  stages: ["Bubble Sky", "Crystal Lagoon", "Aero Twilight", "Liquid Aurora", "Frost Garden", "Petal Meadow", "Thunder Reef", "Moonlit Sea"],
+  stages: [
+    "Bubble Sky", "Crystal Lagoon", "Aero Twilight", "Liquid Aurora", "Frost Garden", "Petal Meadow", "Thunder Reef", "Moonlit Sea",
+    "Polyp Deep", "Solar Court", "Prism Lattice", "Silk Curtain", "Glacier Vault", "Petal Dance", "Thunder Cage", "Drowned Moon",
+  ],
   bosses: [
     "Mizuha, Spirit of Bubbles", "Prism, the Crystal Sage", "Comet, Weaver of Stars", "Aurora, Crown of the Deep",
     "Shirayuki, the Frost Maiden", "Hanabi, the Blooming Dancer", "Narukami of the Thunder Reef", "Tsukiyomi, the Drowned Moon",
+    "Umibozu, Warden of the Polyp", "Shou, the Burning Crown", "Kagami, the Bound Spectrum", "Orin, Weaver of Silk",
+    "Sōgen, Warden of the Vault", "Sakura, the Dancing Petal", "Raikou, Warden of the Cage", "Amaterasu, the Drowned Sun",
   ],
   diffs: [
     "Easy", "Normal", "Hard", "Lunatic",
@@ -114,6 +128,7 @@ const ES: Pack = {
     "Etapa {n}", "¡Etapa {n} superada!", "Bono +{v}", "¡Vida extra!", "¡ADVERTENCIA!", "Se acerca un espíritu enorme…", "Modos de disparo", "NUEVO",
     "Shift alterna entre el patrón abierto y el preciso.",
     "ABIERTO", "PRECISO · SHIFT",
+    "Zoom: ver más campo", "Velocidad: ralentizar el juego", "Hitbox",
   ],
   chars: [
     "Mizu|Espíritu de burbuja equilibrado. Flujo constante y pulso radial a potencia máxima.|Ola Salpicante",
@@ -175,6 +190,7 @@ const JA: Pack = {
     "ステージ {n}", "ステージ {n} クリア！", "ボーナス +{v}", "1UP！", "警告！", "巨大な精霊が近づいている…", "ショット形式", "NEW",
     "Shiftで広射と精密ショットを切り替えます。",
     "広射", "精密 · SHIFT",
+    "ズーム：より広い視野", "速度：ゲームを遅くする", "ヒットボックス",
   ],
   chars: [
     "ミズ|バランス型の泡の精。連射に加え、最大パワーで円状の泡を放つ。|スプラッシュウェーブ",
@@ -236,6 +252,7 @@ const ZH: Pack = {
     "第 {n} 关", "第 {n} 关通过！", "奖励 +{v}", "额外生命！", "警告！", "巨大的精灵正在接近…", "射击模式", "新",
     "Shift 键在散射与精准射击之间切换。",
     "散射", "精准 · SHIFT",
+    "缩放：看到更多区域", "速度：放慢游戏", "判定点",
   ],
   chars: [
     "水珠|均衡的泡泡精灵。稳定连射，满力量时放出环形泡泡。|水花之浪",
@@ -294,6 +311,7 @@ const RU: Pack = {
     "Этап {n}", "Этап {n} пройден!", "Бонус +{v}", "Доп. жизнь!", "ВНИМАНИЕ!", "Приближается огромный дух…", "Режимы огня", "НОВОЕ",
     "Shift переключает широкий и точный режимы стрельбы.",
     "ШИРОКИЙ", "ТОЧНЫЙ · SHIFT",
+    "Масштаб: больше обзор", "Скорость: замедлить игру", "Хитбокс",
   ],
   chars: [
     "Мизу|Ровный дух пузырей. Поток пуль и круговой всплеск на максимуме.|Волна брызг",
@@ -355,6 +373,7 @@ const HE: Pack = {
     "שלב {n}", "שלב {n} הושלם!", "בונוס +{v}", "חיים נוספים!", "אזהרה!", "רוח ענקית מתקרבת…", "מצבי ירי", "חדש",
     "מקש Shift מחליף בין ירי רחב לירי מדויק.",
     "רחב", "מדויק · SHIFT",
+    "זום: ראות יותר שדה", "מהירות: להאט את המשחק", "היטבוקס",
   ],
   chars: [
     "מיזו|רוח בועות מאוזנת. זרם יציב וגל בועות בעוצמה מרבית.|גל התזה",
@@ -416,6 +435,7 @@ const FR: Pack = {
     "Niveau {n}", "Niveau {n} terminé !", "Bonus +{v}", "Vie supplémentaire !", "ATTENTION !", "Un esprit géant approche…", "Modes de tir", "NOUV.",
     "Maj bascule entre le tir large et le tir précis.",
     "LARGE", "PRÉCIS · MAJ",
+    "Zoom : voir plus de terrain", "Vitesse : ralentir le jeu", "Hitbox",
   ],
   chars: [
     "Mizu|Esprit de bulle équilibré. Flux régulier et onde radiale à pleine puissance.|Vague d'éclaboussures",
@@ -477,6 +497,7 @@ const AR: Pack = {
     "المرحلة {n}", "أكملت المرحلة {n}!", "مكافأة +{v}", "حياة إضافية!", "تحذير!", "روح هائلة تقترب…", "أنماط الرمي", "جديد",
     "مفتاح Shift يبدّل بين الرمي الواسع والدقيق.",
     "واسع", "دقيق · SHIFT",
+    "التكبير: رؤية أوسع", "السرعة: إبطاء اللعبة", "مربع الإصابة",
   ],
   chars: [
     "ميزو|روح فقاعات متوازنة. تدفق ثابت ونبضة دائرية عند أقصى قوة.|موجة الرذاذ",

@@ -503,6 +503,138 @@ function boss7(hue: number): Model {
   root.rotation.x = 0.3;
   return { root, anim: (t) => { cres.rotation.y = t * TAU * 0.6; stars.rotation.z = -t * TAU; }, ext: 1.15 };
 }
+/** Boss 8: deep-sea polyp, layered rings of pulsing orbs. */
+function boss8(hue: number): Model {
+  const root = new Group();
+  root.add(M(new SphereGeometry(0.38, 28, 22), mat(hue, 0.6, 1, 0.3)));
+  const rings = new Group();
+  const rm = mat(hue + 25, 0.72, 1, 0.3);
+  for (let i = 0; i < 3; i++) {
+    const ring = M(new TorusGeometry(0.5 + i * 0.14, 0.045, 10, 56), rm);
+    ring.rotation.x = Math.PI / 2 + i * 0.4;
+    ring.rotation.z = i * 0.7;
+    rings.add(ring);
+  }
+  root.add(rings);
+  return { root, anim: (t) => { rings.rotation.y = t * TAU * 0.5; rings.rotation.z = t * 0.8; }, ext: 1.1 };
+}
+/** Boss 9: solar corona, radiating blades over a hot core. */
+function boss9(hue: number): Model {
+  const root = new Group();
+  root.add(M(new SphereGeometry(0.4, 28, 22), mat(hue, 0.5, 1, 0.3)));
+  const corona = new Group();
+  const cm = mat(hue + 40, 0.82, 1, 0.35);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * TAU;
+    const blade = M(new ConeGeometry(0.07, 0.5, 8), cm);
+    blade.position.set(Math.cos(a) * 0.6, Math.sin(a) * 0.6, 0);
+    blade.rotation.z = a - Math.PI / 2;
+    corona.add(blade);
+  }
+  root.add(corona);
+  root.rotation.x = 0.2;
+  return { root, anim: (t) => { corona.rotation.z = t * 0.9; corona.scale.setScalar(1 + Math.sin(t * 3) * 0.06); }, ext: 1.05 };
+}
+/** Boss 10: prism lattice, stacked spinning octahedra. */
+function boss10(hue: number): Model {
+  const root = new Group();
+  const cm = mat(hue, 0.7, 0.9, 0.35);
+  const shards = new Group();
+  for (let i = 0; i < 4; i++) {
+    const s = M(new OctahedronGeometry(0.26 - i * 0.035, 0), cm);
+    s.position.y = i * 0.24 - 0.36;
+    s.rotation.set(i * 0.5, i * 0.8, 0);
+    shards.add(s);
+  }
+  root.add(shards);
+  const ring = M(new TorusGeometry(0.66, 0.04, 10, 60), mat(hue + 50, 0.85, 1, 0.4));
+  ring.rotation.x = Math.PI / 2;
+  root.add(ring);
+  return { root, anim: (t) => { shards.rotation.y = t * TAU * 0.7; ring.rotation.z = t * 1.2; }, ext: 1 };
+}
+/** Boss 11: silk aurora, interleaved torus loops. */
+function boss11(hue: number): Model {
+  const root = new Group();
+  root.add(M(new SphereGeometry(0.3, 24, 18), mat(hue, 0.68, 1, 0.3)));
+  const loops = new Group();
+  const lm = mat(hue + 30, 0.8, 0.9, 0.35);
+  for (let i = 0; i < 3; i++) {
+    const l = M(new TorusGeometry(0.58, 0.055, 12, 64), lm);
+    l.rotation.set(Math.PI / 2 + i * 0.9, i * 0.6, i * 1.2);
+    loops.add(l);
+  }
+  root.add(loops);
+  return { root, anim: (t) => { loops.rotation.y = t * TAU * 0.45; loops.rotation.z = -t * 0.6; }, ext: 1.05 };
+}
+/** Boss 12: glacier vault, jagged crystal cluster. */
+function boss12(hue: number): Model {
+  const root = new Group();
+  const cm = mat(hue, 0.72, 0.55, 0.4);
+  const cluster = new Group();
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * TAU;
+    const len = 0.34 + (i % 3) * 0.16;
+    const shard = M(new ConeGeometry(0.09, len, 6), cm);
+    shard.position.set(Math.cos(a) * 0.3, Math.sin(a) * 0.3, (i % 2) * 0.1);
+    shard.rotation.z = a - Math.PI / 2 + (i % 3) * 0.2;
+    cluster.add(shard);
+  }
+  root.add(M(new IcosahedronGeometry(0.3, 0), cm));
+  root.add(cluster);
+  root.rotation.x = 0.25;
+  return { root, anim: (t) => { cluster.rotation.z = -t * 0.5; root.rotation.y = Math.sin(t) * 0.15; }, ext: 1.1 };
+}
+/** Boss 13: petal dancer, orbiting blossom petals. */
+function boss13(hue: number): Model {
+  const root = new Group();
+  root.add(M(new SphereGeometry(0.34, 26, 20), mat(hue, 0.66, 1, 0.3)));
+  const petals = new Group();
+  const pm = mat(hue + 20, 0.84, 0.9, 0.35);
+  const pg = new SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU;
+    const p = M(pg, pm);
+    p.scale.set(1, 1.7, 0.5);
+    p.position.set(Math.cos(a) * 0.52, Math.sin(a) * 0.52, 0);
+    p.rotation.z = a - Math.PI / 2;
+    petals.add(p);
+  }
+  root.add(petals);
+  return { root, anim: (t) => { petals.rotation.z = t * 0.7; petals.rotation.y = Math.sin(t * 1.3) * 0.3; }, ext: 1.1 };
+}
+/** Boss 14: thunder maw, cage of arcs around a charged core. */
+function boss14(hue: number): Model {
+  const root = new Group();
+  root.add(M(new IcosahedronGeometry(0.34, 1), mat(hue, 0.5, 1, 0.35)));
+  const cage = new Group();
+  const cm = mat(hue + 45, 0.9, 1, 0.4);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI;
+    const bar = M(new BoxGeometry(1.15, 0.05, 0.05), cm);
+    bar.rotation.z = a;
+    cage.add(bar);
+  }
+  root.add(cage);
+  return { root, anim: (t) => { cage.rotation.z = t * 1.4; cage.rotation.y = Math.sin(t * 2) * 0.4; }, ext: 1 };
+}
+/** Boss 15: drowned moon, eclipsed sphere with a sweeping halo. */
+function boss15(hue: number): Model {
+  const root = new Group();
+  root.add(M(new SphereGeometry(0.42, 30, 24), mat(hue, 0.35, 0.6, 0.4)));
+  const halo = M(new TorusGeometry(0.8, 0.09, 14, 72), mat(hue + 15, 0.88, 0.7, 0.35));
+  halo.rotation.x = Math.PI / 2;
+  root.add(halo);
+  const shards = new Group();
+  const sm = mat(hue + 60, 0.9, 1, 0.45);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU;
+    const s = M(new OctahedronGeometry(0.1, 0), sm);
+    s.position.set(Math.cos(a) * 0.9, Math.sin(a) * 0.9, 0);
+    shards.add(s);
+  }
+  root.add(shards);
+  return { root, anim: (t) => { halo.rotation.z = t * 0.6; shards.rotation.z = -t * 0.9; root.rotation.y = t * 0.3; }, ext: 1.15 };
+}
 
 // ---------- characters ----------
 function charModel(idx: number, hue: number): Model {
@@ -760,9 +892,11 @@ export function enemyFrames(kind: Enemy3D, hue: number): Frames {
   });
 }
 
+const BOSS_MODELS = [boss0, boss1, boss2, boss3, boss4, boss5, boss6, boss7, boss8, boss9, boss10, boss11, boss12, boss13, boss14, boss15];
+
 export function bossFrames(idx: number, hue: number): Frames {
   return cached(`boss-${idx}-${hue}`, () => {
-    const b = [boss0, boss1, boss2, boss3, boss4, boss5, boss6, boss7][idx % 8];
+    const b = BOSS_MODELS[idx % BOSS_MODELS.length];
     return renderFrames(() => b(hue), 24, 224, 124, [hue, 28]);
   });
 }

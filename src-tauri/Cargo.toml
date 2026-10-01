@@ -1,6 +1,6 @@
 [package]
 name = "aqua-danmaku"
-version = "1.0.0"
+version = "1.0.1"
 description = "Frutiger Aero bullet hell with 16 playable spirits"
 authors = ["DaiGeass"]
 license = "GPL-3.0-or-later"

@@ -1,5 +1,5 @@
 import { detectLang, LANGS, type Lang } from "./i18n";
-import { CHARS } from "./config";
+import { CHARS, SPEEDS, ZOOMS } from "./config";
 
 export interface ScoreEntry {
   name: string;
@@ -63,9 +63,13 @@ export interface Prefs {
   lang: Lang;
   char: number;
   diff: number;
+  /** index into ZOOMS */
+  zoom: number;
+  /** index into SPEEDS */
+  speed: number;
 }
 export function loadPrefs(): Prefs {
-  const def: Prefs = { lang: detectLang(), char: 0, diff: 1 };
+  const def: Prefs = { lang: detectLang(), char: 0, diff: 1, zoom: ZOOMS.length - 1, speed: 0 };
   try {
     const raw = localStorage.getItem(PREF_KEY);
     if (!raw) return def;
@@ -77,6 +81,14 @@ export function loadPrefs(): Prefs {
           ? Math.max(0, Math.min(CHARS.length - 1, Math.floor(p.char)))
           : 0,
       diff: typeof p.diff === "number" && Number.isFinite(p.diff) ? Math.max(0, Math.min(3, Math.floor(p.diff))) : 1,
+      zoom:
+        typeof p.zoom === "number" && Number.isFinite(p.zoom)
+          ? Math.max(0, Math.min(ZOOMS.length - 1, Math.floor(p.zoom)))
+          : def.zoom,
+      speed:
+        typeof p.speed === "number" && Number.isFinite(p.speed)
+          ? Math.max(0, Math.min(SPEEDS.length - 1, Math.floor(p.speed)))
+          : 0,
     };
   } catch {
     return def;

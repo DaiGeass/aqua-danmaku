@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aqua Danmaku",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.daigeass.aquadanmaku",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -37,6 +37,6 @@
     "category": "Game",
     "copyright": "© 2026 DaiGeass",
     "shortDescription": "Frutiger Aero bullet hell",
-    "longDescription": "Aqua Danmaku — 16 playable spirits, original bullet patterns, bombs, score tables and clean WebAudio synthesis with no external audio assets."
+    "longDescription": "Aqua Danmaku — 16 playable spirits with unique hitboxes and signature mechanics, 16 stages and 48 spell cards, zoom and slow-motion assists, score tables and clean WebAudio synthesis with no external audio assets."
   }
 }

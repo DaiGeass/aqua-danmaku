@@ -161,6 +161,26 @@ body,
   transition: transform 0.12s;
 }
 .round-btn:active { transform: scale(0.92); }
+.round-btn { position: relative; }
+.round-btn .rb-glyph { font-size: 15px; line-height: 1; }
+.round-btn .rb-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  border-radius: 9px;
+  background: #ff3b6b;
+  border: 1.5px solid #fff;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
 
 .bomb-btn {
   position: absolute;

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Game, type GameResult, type GameState } from "./game/engine";
 import { addScore, loadName, loadPrefs, loadScores, saveName, savePrefs, type ScoreEntry } from "./game/scores";
 import { charT, diffDescT, diffT, LANGS, RTL, shotT, tr, type Lang } from "./game/i18n";
-import { CHARS, DIFFS } from "./game/config";
+import { CHARS, DIFFS, SPEEDS, ZOOMS } from "./game/config";
 import { charFrames } from "./game/models3d";
 
 interface OverInfo extends GameResult {
@@ -113,6 +113,8 @@ export default function App() {
   const [lang, setLang] = useState<Lang>(prefs0.lang);
   const [char, setChar] = useState(prefs0.char);
   const [diff, setDiff] = useState(prefs0.diff);
+  const [zoom, setZoom] = useState(prefs0.zoom);
+  const [speed, setSpeed] = useState(prefs0.speed);
 
   const t: TFn = useCallback((k, v) => tr(lang, k, v), [lang]);
   const rtl = RTL[lang];
@@ -166,8 +168,14 @@ export default function App() {
   }, [lang]);
   useEffect(() => {
     gameRef.current?.configure(char, diff);
-    savePrefs({ lang, char, diff });
-  }, [lang, char, diff]);
+    savePrefs({ lang, char, diff, zoom, speed });
+  }, [lang, char, diff, zoom, speed]);
+  useEffect(() => {
+    gameRef.current?.setZoom(ZOOMS[zoom]);
+  }, [zoom]);
+  useEffect(() => {
+    if (gameRef.current) gameRef.current.timeScale = SPEEDS[speed];
+  }, [speed]);
 
   const g = () => gameRef.current;
   const start = useCallback(() => {
@@ -243,6 +251,28 @@ export default function App() {
       )}
 
       <div data-ui className="hud-btns">
+        <button
+          tabIndex={-1}
+          onMouseDown={noFocus}
+          className="round-btn"
+          onClick={() => setZoom((z) => (z + 1) % ZOOMS.length)}
+          aria-label={t("zoomBtn")}
+          title={t("zoomBtn")}
+        >
+          <span className="rb-glyph">{zoom > 0 ? "🔍-" : "🔍+"}</span>
+          {zoom > 0 && <i className="rb-badge">{zoom}</i>}
+        </button>
+        <button
+          tabIndex={-1}
+          onMouseDown={noFocus}
+          className="round-btn"
+          onClick={() => setSpeed((s) => (s + 1) % SPEEDS.length)}
+          aria-label={t("speedBtn")}
+          title={t("speedBtn")}
+        >
+          <span className="rb-glyph">{speed === 0 ? "⏩" : "🐌"}</span>
+          {speed > 0 && <i className="rb-badge">{Math.round(SPEEDS[speed] * 100)}</i>}
+        </button>
         <button tabIndex={-1} onMouseDown={noFocus} className="round-btn" onClick={toggleMute} aria-label="Mute">
           {muted ? "🔇" : "🔊"}
         </button>

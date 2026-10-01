@@ -1,5 +1,31 @@
 export type ShotShape = "drop" | "orb" | "bolt" | "star";
 
+/** Field-of-view zoom levels (1 = fills the container, lower = see more field). */
+export const ZOOMS = [0.62, 0.72, 0.82, 0.91, 1];
+/** Global time scales for easier dodging. */
+export const SPEEDS = [1, 0.85, 0.7, 0.55];
+
+/** Per-pilot signature mechanics, applied on top of their volley pattern. */
+export type Trait =
+  | "none"
+  | "delayed"   // shots hang in place, then launch (Raven)
+  | "ricochet"  // shots bounce off the side walls once (Kiwi)
+  | "bigshot"   // fewer, much larger and heavier shots (Kori)
+  | "spread"    // shots accelerate after a short delay (Hana)
+  | "chainhit"  // destroyed enemies re-ignite nearby bullets (Raiden)
+  | "rear"      // a rear-facing shot mirrors the main volley (Yami)
+  | "orbit"     // shots circle the pilot before flying (Luna)
+  | "wave"      // shots weave side to side with a persistent offset (Nami)
+  | "pierce"    // every shot pierces, damage scales with power (Sol)
+  | "slowgrow"  // shots accelerate slowly over their lifetime (Yuki)
+  | "ember"     // every 4th volley is a wide fanned burst (Akari)
+  | "gust"      // shots drift outward, curve back when focused (Kaze)
+  | "dense"     // many slow small shots, wide coverage (Kumo)
+  | "meteor"    // high-damage shots that accelerate hard (Hoshi)
+  | "lance"     // alternating tight twin columns (Mizu)
+  | "homing"    // shots gently seek, stronger when focused (Momo)
+  | "dash"      // extra movement speed while not focused (Sora);
+
 export interface CharDef {
   id: string;
   hue: number;
@@ -15,25 +41,30 @@ export interface CharDef {
   rot: boolean;
   /** Secondary shot hue for special volleys (defaults to the character hue). */
   hue2?: number;
+  /** Player hitbox radius in px. Smaller dodges more easily but grazes less. */
+  hitR: number;
+  /** Grapes/special shot behaviour unique to this pilot. */
+  trait: Trait;
 }
 
+
 export const CHARS: CharDef[] = [
-  { id: "mizu", hue: 185, speed: 320, focus: 130, rate: 0.072, bomb: 0, graze: 1, stats: [3, 3, 4], options: true, shape: "drop", rot: false },
-  { id: "kiwi", hue: 130, speed: 296, focus: 118, rate: 0.076, bomb: 1, graze: 1, stats: [5, 2, 4], options: true, shape: "drop", rot: true },
-  { id: "momo", hue: 335, speed: 310, focus: 135, rate: 0.078, bomb: 2, graze: 1.2, stats: [3, 3, 5], options: false, shape: "drop", rot: true },
-  { id: "sora", hue: 48, speed: 385, focus: 172, rate: 0.07, bomb: 3, graze: 1.5, stats: [2, 5, 3], options: true, shape: "drop", rot: false },
-  { id: "kori", hue: 200, speed: 305, focus: 128, rate: 0.082, bomb: 4, graze: 1, stats: [4, 3, 3], options: true, shape: "drop", rot: true },
-  { id: "hana", hue: 300, speed: 312, focus: 140, rate: 0.066, bomb: 5, graze: 1.15, stats: [4, 3, 4], options: true, shape: "orb", rot: false },
-  { id: "raiden", hue: 60, speed: 330, focus: 150, rate: 0.1, bomb: 6, graze: 0.9, stats: [5, 4, 2], options: true, shape: "bolt", rot: true },
-  { id: "yami", hue: 265, speed: 318, focus: 138, rate: 0.074, bomb: 7, graze: 1.3, stats: [4, 3, 4], options: false, shape: "drop", rot: true },
-  { id: "luna", hue: 280, speed: 322, focus: 142, rate: 0.075, bomb: 8, graze: 1.05, stats: [4, 3, 4], options: true, shape: "orb", rot: false, hue2: 300 },
-  { id: "nami", hue: 218, speed: 316, focus: 134, rate: 0.08, bomb: 9, graze: 1.1, stats: [3, 3, 4], options: true, shape: "drop", rot: true },
-  { id: "sol", hue: 25, speed: 340, focus: 150, rate: 0.088, bomb: 10, graze: 0.95, stats: [5, 4, 2], options: true, shape: "star", rot: true },
-  { id: "yuki", hue: 168, speed: 300, focus: 122, rate: 0.084, bomb: 11, graze: 1, stats: [4, 2, 4], options: false, shape: "drop", rot: true },
-  { id: "akari", hue: 8, speed: 336, focus: 148, rate: 0.092, bomb: 12, graze: 0.95, stats: [5, 4, 2], options: true, shape: "star", rot: true, hue2: 45 },
-  { id: "kaze", hue: 150, speed: 328, focus: 140, rate: 0.077, bomb: 13, graze: 1.15, stats: [3, 4, 4], options: true, shape: "drop", rot: true },
-  { id: "kumo", hue: 240, speed: 306, focus: 126, rate: 0.086, bomb: 14, graze: 1.05, stats: [3, 2, 5], options: false, shape: "orb", rot: false, hue2: 200 },
-  { id: "hoshi", hue: 315, speed: 348, focus: 152, rate: 0.081, bomb: 15, graze: 1, stats: [4, 5, 3], options: true, shape: "star", rot: true },
+  { id: "mizu", hue: 185, speed: 320, focus: 130, rate: 0.072, bomb: 0, graze: 1, stats: [3, 3, 4], options: true, shape: "drop", rot: false, hitR: 3.0, trait: "lance" },
+  { id: "kiwi", hue: 130, speed: 296, focus: 118, rate: 0.076, bomb: 1, graze: 1, stats: [5, 2, 4], options: true, shape: "drop", rot: true, hitR: 2.6, trait: "ricochet" },
+  { id: "momo", hue: 335, speed: 310, focus: 135, rate: 0.078, bomb: 2, graze: 1.2, stats: [3, 3, 5], options: false, shape: "drop", rot: true, hitR: 3.2, trait: "homing" },
+  { id: "sora", hue: 48, speed: 385, focus: 172, rate: 0.07, bomb: 3, graze: 1.5, stats: [2, 5, 3], options: true, shape: "drop", rot: false, hitR: 2.8, trait: "dash" },
+  { id: "kori", hue: 200, speed: 305, focus: 128, rate: 0.082, bomb: 4, graze: 1, stats: [4, 3, 3], options: true, shape: "drop", rot: true, hitR: 3.4, trait: "bigshot" },
+  { id: "hana", hue: 300, speed: 312, focus: 140, rate: 0.066, bomb: 5, graze: 1.15, stats: [4, 3, 4], options: true, shape: "orb", rot: false, hitR: 3.0, trait: "spread" },
+  { id: "raiden", hue: 60, speed: 330, focus: 150, rate: 0.1, bomb: 6, graze: 0.9, stats: [5, 4, 2], options: true, shape: "bolt", rot: true, hitR: 2.7, trait: "chainhit" },
+  { id: "yami", hue: 265, speed: 318, focus: 138, rate: 0.074, bomb: 7, graze: 1.3, stats: [4, 3, 4], options: false, shape: "drop", rot: true, hitR: 3.0, trait: "rear" },
+  { id: "luna", hue: 280, speed: 322, focus: 142, rate: 0.075, bomb: 8, graze: 1.05, stats: [4, 3, 4], options: true, shape: "orb", rot: false, hue2: 300, hitR: 2.9, trait: "orbit" },
+  { id: "nami", hue: 218, speed: 316, focus: 134, rate: 0.08, bomb: 9, graze: 1.1, stats: [3, 3, 4], options: true, shape: "drop", rot: true, hitR: 3.1, trait: "wave" },
+  { id: "sol", hue: 25, speed: 340, focus: 150, rate: 0.088, bomb: 10, graze: 0.95, stats: [5, 4, 2], options: true, shape: "star", rot: true, hitR: 2.6, trait: "pierce" },
+  { id: "yuki", hue: 168, speed: 300, focus: 122, rate: 0.084, bomb: 11, graze: 1, stats: [4, 2, 4], options: false, shape: "drop", rot: true, hitR: 3.5, trait: "slowgrow" },
+  { id: "akari", hue: 8, speed: 336, focus: 148, rate: 0.092, bomb: 12, graze: 0.95, stats: [5, 4, 2], options: true, shape: "star", rot: true, hue2: 45, hitR: 2.7, trait: "ember" },
+  { id: "kaze", hue: 150, speed: 328, focus: 140, rate: 0.077, bomb: 13, graze: 1.15, stats: [3, 4, 4], options: true, shape: "drop", rot: true, hitR: 2.8, trait: "gust" },
+  { id: "kumo", hue: 240, speed: 306, focus: 126, rate: 0.086, bomb: 14, graze: 1.05, stats: [3, 2, 5], options: false, shape: "orb", rot: false, hue2: 200, hitR: 3.4, trait: "dense" },
+  { id: "hoshi", hue: 315, speed: 348, focus: 152, rate: 0.081, bomb: 15, graze: 1, stats: [4, 5, 3], options: true, shape: "star", rot: true, hitR: 2.5, trait: "meteor" },
 ];
 
 export type BombStyle =
@@ -100,6 +131,6 @@ export const DIFFS: DiffDef[] = [
   { id: "lunatic", dens: 1.55, speed: 1.2, rate: 1.4, hp: 1.3, lives: 1, bombs: 2, score: 2.2, spawn: 0.75, color: "#ee3a9a" },
 ];
 
-/** 8 bosses × 3 phases = 24 spell cards. */
-export const SPELL_COUNT = 24;
-export const STAGE_COUNT = 8;
+/** 16 bosses × 3 phases = 48 spell cards. */
+export const SPELL_COUNT = 48;
+export const STAGE_COUNT = 16;
