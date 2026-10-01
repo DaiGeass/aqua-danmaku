@@ -1,0 +1,28 @@
+[package]
+name = "aqua-danmaku"
+version = "1.0.0"
+description = "Frutiger Aero bullet hell with 16 playable spirits"
+authors = ["DaiGeass"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/DaiGeass/aqua-danmaku"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "aqua_danmaku_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
