@@ -136,8 +136,8 @@ const ALL_WAVES = [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
 const BH = [
   [0, 1, 2, 6], [1, 2, 0, 6], [2, 1, 0, 4], [0, 2, 4, 1],
   [4, 5, 2, 6], [6, 0, 1, 4], [2, 3, 4, 6], [6, 4, 0, 2],
-  [13, 16, 14, 6], [20, 18, 15, 2], [13, 17, 19, 14], [16, 20, 13, 2],
-  [18, 14, 17, 19], [15, 20, 16, 13], [17, 13, 20, 18], [19, 16, 14, 20],
+  [3, 5, 0, 2], [1, 2, 0, 3], [4, 6, 2, 0], [0, 6, 3, 4],
+  [5, 3, 6, 2], [0, 2, 5, 6], [2, 5, 6, 3], [6, 5, 0, 2],
 ];
 
 const ENEMY = [
@@ -334,7 +334,7 @@ export class Game {
   private T(key: string, vars?: Record<string, string | number>) { return tr(this.lang, key, vars); }
   private N(n: number) { return Math.max(1, Math.round(n * this.D.dens)); }
   private N2(n: number) { return Math.max(1, Math.round(n * (1 + (this.D.dens - 1) * 0.5))); }
-  private bc(k: number) { return BH[this.stageIdx % BH.length][k % 4]; }
+  private bc(k: number) { return BH[this.stageIdx % BH.length][k % 4] % HUES.length; }
   private sp() { return Math.min(1.9, 1 + this.level * 0.09) * this.D.speed; }
   private iv(x: number) { return x / this.D.rate; }
 
@@ -1257,7 +1257,7 @@ export class Game {
     for (let i = this.bullets.n - 1; i >= 0; i--) {
       const bl = this.bullets.items[i];
       if ((bl.x - p.x) ** 2 + (bl.y - p.y) ** 2 < R2) {
-        if (Math.random() < 0.6) this.sparks(bl.x, bl.y, 1, (bl.hue + 4) % 7, 70, 7, 0.35);
+        if (Math.random() < 0.6) this.sparks(bl.x, bl.y, 1, (bl.hue + 4) % HUES.length, 70, 7, 0.35);
         if (cvChance > 0 && converted < 6 && Math.random() < cvChance) {
           this.dropItem(1, bl.x, bl.y, 10);
           converted++;
@@ -1970,7 +1970,7 @@ export class Game {
     this.clearBullets(true);
     for (let i = 0; i < 4; i++)
       this.later(i * 0.12, () => {
-        this.burst(x + rnd(-30, 30), y + rnd(-30, 30), 30, i % 7, 300, 16, 1);
+        this.burst(x + rnd(-30, 30), y + rnd(-30, 30), 30, i % HUES.length, 300, 16, 1);
         this.ring(x + rnd(-20, 20), y + rnd(-20, 20), 120 + i * 30, 0.8);
       });
     this.bubbleBurst(x, y, 30, 220);
@@ -2438,7 +2438,7 @@ export class Game {
     let gems = 0;
     for (let i = this.bullets.n - 1; i >= 0; i--) {
       const b = this.bullets.items[i];
-      if (Math.random() < 0.5) this.sparks(b.x, b.y, 1, (b.hue + 4) % 7, 60, 7, 0.4);
+      if (Math.random() < 0.5) this.sparks(b.x, b.y, 1, (b.hue + 4) % HUES.length, 60, 7, 0.4);
       if (toItems && gems < 36 && Math.random() < 0.4) { this.dropItem(1, b.x, b.y, 20); gems++; }
       this.bullets.kill(i);
     }
@@ -2858,7 +2858,8 @@ export class Game {
     const sprs = this.spr.bullets;
     for (let i = 0; i < B.n; i++) {
       const b = B.items[i];
-      const sp = sprs[b.size][b.hue];
+      const sp = sprs[b.size]?.[b.hue];
+      if (!sp) continue;
       const pop = b.age < 0.14 ? 0.4 + (b.age / 0.14) * 0.6 : 1;
       const w = sp.w * pop;
       ctx.drawImage(sp.c, b.x - w / 2, b.y - w / 2, w, w);
